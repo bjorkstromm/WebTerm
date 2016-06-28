@@ -1,0 +1,44 @@
+﻿<!DOCTYPE HTML>
+<html>
+<head>
+    <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.12.2.min.js"></script>
+    <script type="text/javascript">
+        var ws = new WebSocket("ws://" + window.location.hostname + ":" + window.location.port);
+
+        ws.onopen = function()
+        {
+            $("#textarea").append("Connected...<br/>");
+        };
+
+        ws.onmessage = function (e)
+        {
+            $("#textarea").append(e.data + "<br/>");
+        };
+
+        ws.onclose = function()
+        {
+            $("#textarea").append("Closed...<br/>");
+        };
+
+        $(document).ready(function(){
+            $("form").submit(function (e) {
+                e.preventDefault();
+
+                ws.send($("input:first").val());
+                $("input:first").val("");
+            });
+        });
+    </script>
+</head>
+<body>
+    <div>
+        <form>
+            <input type="text" />
+            <input type="submit" />
+        </form>
+        <div>
+            <span id="textarea"></span>
+        </div>
+    </div>
+</body>
+</html>
