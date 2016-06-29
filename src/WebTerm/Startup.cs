@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -39,41 +36,44 @@ namespace WebTerm
                 if (http.WebSockets.IsWebSocketRequest)
                 {
                     using (var webSocket = await http.WebSockets.AcceptWebSocketAsync())
-                    using (var process = new Process())
+                    using (var terminal = new Terminal())
                     {
-                        process.StartInfo.FileName = "cmd.exe";
-                        process.StartInfo.UseShellExecute = false;
-                        process.StartInfo.RedirectStandardOutput = true;
-                        process.StartInfo.RedirectStandardInput = true;
-
-                        process.OutputDataReceived += async (sender, e) =>
+                        terminal.OnRead = async (data) =>
                         {
-                            var sendBuffer = GetBytes(e.Data);
+                            var sendBuffer = GetBytes(data);
 
-                            await webSocket.SendAsync(
-                                new ArraySegment<byte>(sendBuffer, 0, sendBuffer.Length), 
-                                WebSocketMessageType.Text, 
-                                true, 
-                                CancellationToken.None);
+                            if (webSocket != null)
+                            {
+                                await webSocket.SendAsync(
+                                    new ArraySegment<byte>(sendBuffer, 0, sendBuffer.Length),
+                                    WebSocketMessageType.Text,
+                                    true, CancellationToken.None);
+                            }
                         };
-                        
-                        process.Start();
-                        var processWriter = process.StandardInput;
-                        process.BeginOutputReadLine();
+                        terminal.OnError = async (data) =>
+                        {
+                            var sendBuffer = GetBytes(data);
+
+                            if (webSocket != null)
+                            {
+                                await webSocket.SendAsync(
+                                    new ArraySegment<byte>(sendBuffer, 0, sendBuffer.Length),
+                                    WebSocketMessageType.Text,
+                                    true, CancellationToken.None);
+                            }
+                        };
+
+                        terminal.Start();
 
                         var receiveBuffer = new byte[1024];
                         var received = await webSocket.ReceiveAsync(new ArraySegment<byte>(receiveBuffer), CancellationToken.None);
 
                         while (received.MessageType != WebSocketMessageType.Close)
                         {
-                            var b = new byte[received.Count + 1];
-                            Array.Copy(receiveBuffer, 0, b, 0, b.Length);
-                            var message = GetString(b);
-                            processWriter.WriteLine(message);
-                            processWriter.Flush();
+                            var message = GetString(receiveBuffer.Take(received.Count).ToArray());
+                            await terminal.WriteAsync(message);
 
                             received = await webSocket.ReceiveAsync(new ArraySegment<byte>(receiveBuffer), CancellationToken.None);
-
                         }
 
                         await webSocket.CloseAsync(received.CloseStatus.Value, received.CloseStatusDescription, CancellationToken.None);
@@ -84,17 +84,17 @@ namespace WebTerm
                     await next();
                 }
             });
-            
+
             app.UseDefaultFiles();
             app.UseStaticFiles();
         }
 
-        static byte[] GetBytes(string str)
+        private static byte[] GetBytes(string str)
         {
-            return System.Text.Encoding.UTF8.GetBytes(str);
+            return !string.IsNullOrEmpty(str) ? System.Text.Encoding.UTF8.GetBytes(str) : new byte[0];
         }
 
-        static string GetString(byte[] bytes)
+        private static string GetString(byte[] bytes)
         {
             return System.Text.Encoding.UTF8.GetString(bytes);
         }
