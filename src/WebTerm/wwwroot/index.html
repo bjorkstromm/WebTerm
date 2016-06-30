@@ -16,7 +16,7 @@
             if (line != "") {
                 websocket.send(line);
             }
-            this.prompt();
+            //this.prompt();
         }
 
         window.onload = function () {
@@ -26,7 +26,7 @@
                 y: 0,
                 termDiv: "terminal",
                 bgColor: '#232e45',
-                greeting: '%+r **** termlib.js import sample **** %-r%n%n * any text is simply echoed%n * for imports use the links at the left%n * type "exit" to quit.%n '
+                greeting: "%+r **** termlib.js import sample ****"
             });
             terminal.open();
 
@@ -40,7 +40,26 @@
 
             websocket.onmessage = function (e) {
                 terminal.newLine();
-                terminal.write(e.data);
+
+                var msg = JSON.parse(e.data);
+
+                switch (msg.Type) {
+                    case 0:
+                        terminal.prompt();
+                        break;
+                    case 1:
+                        terminal.write(msg.Data);
+                        break;
+                    case 2:
+                        terminal.write(msg.Data);
+                        break;
+                    case 3:
+                        terminal.write(msg.Data);
+                        break;
+                    default:
+                        console.error("invalid message type {0}", msg.Type);
+                }
+
                 //terminal.prompt();
             };
 
