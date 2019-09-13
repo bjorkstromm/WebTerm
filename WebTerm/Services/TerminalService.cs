@@ -7,7 +7,10 @@ namespace WebTerm
     {
         private readonly System.Diagnostics.Process _process;
 
-        
+
+        // https://github.com/GoogleChromeLabs/carlo
+        // https://github.com/gkmo/CarloSharp
+
         private static string GetSystemDirectory(bool placeInEnvironmentVariable)
         {
             string sysDir = "";
@@ -41,39 +44,49 @@ namespace WebTerm
         public TerminalService()
         {
             string fileName = System.IO.Path.Combine(GetSystemDirectory(), "cmd.exe");
+
             if (System.Environment.OSVersion.Platform == System.PlatformID.Unix)
+            {
                 fileName = "/usr/bin/bash";
 
-            if (!System.IO.File.Exists(fileName))
-                fileName = "/bin/bash";
-            
-            if (!System.IO.File.Exists(fileName))
-                fileName = "/usr/bin/sh";
-            
-            if (!System.IO.File.Exists(fileName))
-                fileName = "/bin/sh";
-            
-            // cat /etc/shells
-            if (!System.IO.File.Exists(fileName))
-            {
-                using (System.IO.StreamReader sr = new System.IO.StreamReader(@"/etc/shells"))
+                if (!System.IO.File.Exists(fileName))
+                    fileName = "/bin/bash";
+
+                if (!System.IO.File.Exists(fileName))
+                    fileName = "/usr/bin/sh";
+
+                if (!System.IO.File.Exists(fileName))
+                    fileName = "/bin/sh";
+
+
+                if (!System.IO.File.Exists(fileName))
                 {
-                    string line = null;
-                    while ((line = sr.ReadLine()) != null)
+
+                    // cat /etc/shells
+                    if (System.IO.File.Exists("/etc/shells"))
                     {
-                        line = line.Trim(' ', '\t', '\r', '\n', '\v');
-                        // System.Console.WriteLine(line);
-                        
-                        fileName = line;
-                        if (System.IO.File.Exists(fileName))
-                            break;
-                    } // Whend 
-                    
-                } // End Using sr
-                
-            } // End if (!System.IO.File.Exists(fileName))
-            
-            
+
+                        using (System.IO.StreamReader sr = new System.IO.StreamReader("/etc/shells"))
+                        {
+                            string line = null;
+                            while ((line = sr.ReadLine()) != null)
+                            {
+                                line = line.Trim(' ', '\t', '\r', '\n', '\v');
+                                // System.Console.WriteLine(line);
+
+                                fileName = line;
+                                if (System.IO.File.Exists(fileName))
+                                    break;
+                            } // Whend 
+
+                        } // End Using sr
+
+                    } // End if (System.IO.File.Exists("/etc/shells")) 
+
+                } // End if (!System.IO.File.Exists(fileName))
+
+            } // End if (System.Environment.OSVersion.Platform == System.PlatformID.Unix) 
+
             _process = new System.Diagnostics.Process
             {
                 StartInfo = new System.Diagnostics.ProcessStartInfo()
