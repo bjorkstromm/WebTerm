@@ -1,0 +1,94 @@
+﻿<!DOCTYPE HTML>
+<html>
+<head>
+    <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.12.2.min.js"></script>
+    <script src="js/termlib/termlib.js"></script>
+    <link rel="stylesheet" type="text/css" href="js/termlib/term_styles.css">
+    <script type="text/javascript">
+        // Global variables
+        var terminal;
+        var websocket;
+
+        // Terminal Handler
+        function terminalHandler() {
+            this.newLine();
+            var line = this.lineBuffer;
+            if (line != "") {
+                websocket.send(line);
+            }
+            //this.prompt();
+        }
+
+        window.onload = function () {
+            var terminal = new Terminal({
+                handler: terminalHandler,
+                x: 0,
+                y: 0,
+                termDiv: "terminal",
+                bgColor: '#232e45',
+                greeting: "%+r **** termlib.js import sample ****"
+            });
+            terminal.open();
+
+            websocket = new WebSocket("ws://" + window.location.hostname + ":" + window.location.port);
+
+            websocket.onopen = function () {
+                terminal.newLine();
+                terminal.write("Connected to Terminal");
+                //terminal.prompt();
+            };
+
+            websocket.onmessage = function (e) {
+                terminal.newLine();
+
+                var msg = JSON.parse(e.data);
+
+                switch (msg.Type) {
+                    case 0:
+                        terminal.prompt();
+                        break;
+                    case 1:
+                        terminal.write(msg.Data);
+                        break;
+                    case 2:
+                        terminal.write(msg.Data);
+                        break;
+                    case 3:
+                        terminal.write(msg.Data);
+                        break;
+                    default:
+                        console.error("invalid message type {0}", msg.Type);
+                }
+
+                //terminal.prompt();
+            };
+
+            websocket.onclose = function () {
+                terminal.newLine();
+                terminal.write("Closed...");
+                //terminal.prompt();
+            };
+        };
+
+        //$(document).ready(function(){
+        //    $("form").submit(function (e) {
+        //        e.preventDefault();
+
+        //        ws.send($("input:first").val());
+        //        $("input:first").val("");
+        //    });
+        //});
+    </script>
+</head>
+<body>
+    <div id="terminal">
+        <!--<form>
+            <input type="text" />
+            <input type="submit" />
+        </form>
+        <div>
+            <span id="textarea"></span>
+        </div>-->
+    </div>
+</body>
+</html>
